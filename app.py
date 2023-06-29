@@ -27,49 +27,32 @@ submit_button = st.button("Analyze Text")
 
 # Predict function for sentiment analysis
 def predict_sentiment(text):
-    tokenized_text = classification_tokenizer.tokenize(text)
-    results = []
-    
-    # Break text into chunks of max_model_length tokens
-    for i in range(0, len(tokenized_text), classification_tokenizer.model_max_length):
-        chunk = tokenized_text[i:i+classification_tokenizer.model_max_length]
-        chunk = classification_tokenizer.convert_tokens_to_string(chunk)
-
-        inputs = classification_tokenizer(chunk, return_tensors="pt", truncation=True, padding='max_length')
-        outputs = classification_model(**inputs)
-        probs = torch.nn.functional.softmax(outputs[0], dim=-1)
-        results.append(probs.detach().numpy())
-    return results
+    inputs = classification_tokenizer(text, return_tensors="pt", truncation=True, padding='max_length')
+    outputs = classification_model(**inputs)
+    probs = torch.nn.functional.softmax(outputs[0], dim=-1)
+    return probs.detach().numpy()
 
 # Predict function for text summarization
 def summarize_text(text):
-    tokenized_text = summarization_tokenizer.tokenize(text)
-    summaries = []
-    
-    # Break text into chunks of max_model_length tokens
-    for i in range(0, len(tokenized_text), summarization_tokenizer.model_max_length):
-        chunk = tokenized_text[i:i+summarization_tokenizer.model_max_length]
-        chunk = summarization_tokenizer.convert_tokens_to_string(chunk)
-        
-        inputs = summarization_tokenizer.encode("summarize: " + chunk, return_tensors="pt", truncation=True, padding='max_length')
-        outputs = summarization_model.generate(inputs, max_length=150, min_length=40, length_penalty=2.0, num_beams=4, early_stopping=True)
-        summary = summarization_tokenizer.decode(outputs[0]).replace('<pad>', '').replace('</s>', '')
-        summaries.append(summary)
-    return summaries
+    inputs = summarization_tokenizer.encode("summarize: " + text, return_tensors="pt", truncation=True, padding='max_length')
+    outputs = summarization_model.generate(inputs, max_length=150, min_length=40, length_penalty=2.0, num_beams=4, early_stopping=True)
+    return summarization_tokenizer.decode(outputs[0]).replace('<pad>', '').replace('</s>', '')
 
 if submit_button:
     if text:
-        with st.spinner("Analyzing..."):
-            # Sentiment analysis
-            results = predict_sentiment(text)
-            for i, probs in enumerate(results):
-                st.markdown(f"**Result {i+1}:**")
+        tokenized_text = classification_tokenizer(text, return_tensors="pt", truncation=False)  # don't truncate here to get the real token count
+        if len(tokenized_text["input_ids"][0]) > 512:
+            st.warning("Text is too long. Please enter text with less than 512 tokens.")
+        else:
+            with st.spinner("Analyzing..."):
+                # Sentiment analysis
+                probs = predict_sentiment(text)
                 st.markdown(f"**Positive sentiment:** `{probs[0][1]:.2f}`")
                 st.markdown(f"**Negative sentiment:** `{probs[0][0]:.2f}`")
 
-            # Text summarization
-            summaries = summarize_text(text)
-            for i, summary in enumerate(summaries):
-                st.markdown(f"**Summary {i+1}:** `{summary}`")
+                # Text summarization
+                summary = summarize_text(text)
+                st.markdown(f"**Summary:** `{summary}`")
     else:
         st.warning("Please enter text to analyze.")
+
