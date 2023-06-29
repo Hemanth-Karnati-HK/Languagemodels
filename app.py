@@ -23,6 +23,7 @@ st.title('Text Classification and Summarization with Hugging Face')
 
 # Take user input
 text = st.text_area("Enter text:", "")
+submit_button = st.button("Analyze Text")
 
 # Predict function for sentiment analysis
 def predict_sentiment(text):
@@ -35,14 +36,18 @@ def predict_sentiment(text):
 def summarize_text(text):
     inputs = summarization_tokenizer.encode("summarize: " + text, return_tensors="pt", max_length=512, truncation=True)
     outputs = summarization_model.generate(inputs, max_length=150, min_length=40, length_penalty=2.0, num_beams=4, early_stopping=True)
-    return summarization_tokenizer.decode(outputs[0])
+    return summarization_tokenizer.decode(outputs[0]).replace('<pad>', '').replace('</s>', '')
 
-if text:
-    # Sentiment analysis
-    probs = predict_sentiment(text)
-    st.write(f"Positive sentiment: {probs[0][1]:.2f}")
-    st.write(f"Negative sentiment: {probs[0][0]:.2f}")
+if submit_button:
+    if text:
+        with st.spinner("Analyzing..."):
+            # Sentiment analysis
+            probs = predict_sentiment(text)
+            st.markdown(f"**Positive sentiment:** `{probs[0][1]:.2f}`")
+            st.markdown(f"**Negative sentiment:** `{probs[0][0]:.2f}`")
 
-    # Text summarization
-    summary = summarize_text(text)
-    st.write(f"Summary: {summary}")
+            # Text summarization
+            summary = summarize_text(text)
+            st.markdown(f"**Summary:** `{summary}`")
+    else:
+        st.warning("Please enter text to analyze.")
