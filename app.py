@@ -4,7 +4,7 @@ from transformers import AutoModelForSequenceClassification, AutoTokenizer, Auto
 import torch
 
 # Define function to load models
-@st.cache_data(allow_output_mutation=True)
+@st.cache(allow_output_mutation=True)
 def load_models():
     classification_model_name = 'distilbert-base-uncased-finetuned-sst-2-english'
     classification_model = AutoModelForSequenceClassification.from_pretrained(classification_model_name)
